@@ -17,10 +17,7 @@ GONOSUMDB="github.com/PicPay"
 
 ### Comandos úteis
 
-``` bash
-# subindo os recursos de infra do projeto via docker
-$ make up-infra
-```
+#### Assumindo que você irá rodar com o GO previamente instalado na sua maquina:
 
 ``` bash
 # baixando as dependencias para a vendor local e buildando o projeto
@@ -47,11 +44,23 @@ $ make deps
 $ make run
 ```
 
+#### Assumindo que você irá rodar a partir do docker:
+
+``` bash
+# baixando as dependencias para a vendor local e buildando o projeto
+$ make docker-build
+```
+
+``` bash
+# executando o projeto
+$ make docker-run
+```
+
 ## Executando o código diretamente pelo executável
 
 * O go é uma linguagem fortemente tipada e seu build é a nível de S.O;
-* Gerei os executáveis `capital-gains.sh` e `capital-gains.exe` após compilar o projeto;
-* O executável `.sh` pode ser aberto em S.Os Linux e Mac. O executável `.exe`em S.Os Windows;
+* Gerei o executável `capital-gains.sh` após compilar o projeto;
+* O executável `.sh` pode ser aberto em S.Os Linux e Mac.
 
 ## Decisões técnicas
 ``` bash

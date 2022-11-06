@@ -1,17 +1,17 @@
 include .env
 export
 
+docker-build:
+	docker build -t capital-gains .
+
+docker-run:
+	docker run -it --rm --name capital-gains capital-gains
+
 deps:
 	go mod tidy && go get -u ./cmd
 
 build:
 	go build -o bin/capital-gains ./cmd
-
-up-infra:
-	docker compose up -d
-
-down-infra:
-	docker rm -vf $(docker ps -a -q)
 
 run:
 	go run -race ./cmd/main.go
