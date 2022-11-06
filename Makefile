@@ -1,6 +1,3 @@
-include .env
-export
-
 docker-build:
 	docker build -t capital-gains .
 
