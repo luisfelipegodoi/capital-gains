@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>Go Coverage Report</title>
+		<title>financial: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,26 +55,152 @@
 			<div id="nav">
 				<select id="files">
 				
+				<option value="file0">github.com/luisfelipegodoi/capital-gains/financial/service.go (0.0%)</option>
+				
 				</select>
 			</div>
 			<div id="legend">
 				<span>not tracked</span>
 			
-				<span class="cov0">no coverage</span>
-				<span class="cov1">low coverage</span>
-				<span class="cov2">*</span>
-				<span class="cov3">*</span>
-				<span class="cov4">*</span>
-				<span class="cov5">*</span>
-				<span class="cov6">*</span>
-				<span class="cov7">*</span>
-				<span class="cov8">*</span>
-				<span class="cov9">*</span>
-				<span class="cov10">high coverage</span>
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
 			
 			</div>
 		</div>
 		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">//go:generate go run github.com/golang/mock/mockgen -source=service.go -destination=mock/service.go
+package financial
+
+import (
+        "encoding/json"
+        "fmt"
+        "github.com/shopspring/decimal"
+        "log"
+        "os"
+)
+
+const (
+        maximumProfitAllowed = 20000
+        taxOperationBuy      = 0
+)
+
+type CapitalGains interface {
+        CalculateCapitalGains(operationList *os.File) ([]Fee, error)
+}
+
+// CalculateCapitalGains - service method for calculate capital gains
+func CalculateCapitalGains(operationList *os.File) ([]Fee, error) <span class="cov0" title="0">{
+
+        operations, err := buildJsonToStruct(operationList)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Error to convert json file to our struct. Please try again.")
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("Operations list successfully read")
+
+        fees, err := calculateFees(operations)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Error to convert fees")
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println("Successfully calculated fees")
+
+        return fees, nil</span>
+}
+
+func buildJsonToStruct(operationList *os.File) ([]Operation, error) <span class="cov0" title="0">{
+        var operations []Operation
+
+        if err := json.NewDecoder(operationList).Decode(&amp;operations); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return operations, nil</span>
+}
+
+func calculateFees(operations []Operation) ([]Fee, error) <span class="cov0" title="0">{
+
+        var weightedAveragePrice, lastUnitCost, lastDamage decimal.Decimal
+        var currentTotalActions int64
+        arrFees := make([]Fee, len(operations))
+
+        for i, v := range operations </span><span class="cov0" title="0">{
+                switch v.Type </span>{
+                case OperationBuy:<span class="cov0" title="0">
+                        v.TaxPaid, weightedAveragePrice = calculateBuyTax(v, currentTotalActions, weightedAveragePrice)
+                        currentTotalActions += v.Quantity</span>
+                case OperationSell:<span class="cov0" title="0">
+                        v.TaxPaid, lastDamage = calculateSellTax(v, currentTotalActions, weightedAveragePrice, lastUnitCost, lastDamage)
+                        currentTotalActions -= v.Quantity</span>
+                }
+
+                <span class="cov0" title="0">lastUnitCost = v.UnitCost
+                arrFees[i].Tax = v.TaxPaid</span>
+        }
+
+        <span class="cov0" title="0">return arrFees, nil</span>
+}
+
+func calculateBuyTax(operation Operation, currentTotalActions int64,
+        currentWeightedAverage decimal.Decimal) (decimal.Decimal, decimal.Decimal) <span class="cov0" title="0">{
+
+        newWeightedAverage := calculateWeightedAverage(operation, currentTotalActions, currentWeightedAverage)
+
+        return decimal.NewFromInt(taxOperationBuy), newWeightedAverage
+}</span>
+
+func calculateSellTax(operation Operation, currentTotalActions int64,
+        weightedAveragePrice, lastUnitCost, lastDamage decimal.Decimal) (decimal.Decimal, decimal.Decimal) <span class="cov0" title="0">{
+
+        loss, taxToPay := calculateTaxOperation(operation, currentTotalActions, weightedAveragePrice,
+                lastUnitCost, lastDamage)
+
+        return taxToPay, loss
+}</span>
+
+func calculateTaxOperation(operation Operation, currentTotalActions int64, weightedAveragePrice,
+        lastUnitCost, lastDamage decimal.Decimal) (decimal.Decimal, decimal.Decimal) <span class="cov0" title="0">{
+
+        var profits, loss, taxToPay decimal.Decimal
+        var taxPercentPaid int64 = 20
+
+        actionsDecreased := currentTotalActions - operation.Quantity
+        if actionsDecreased == 0 </span><span class="cov0" title="0">{
+                actionsDecreased = currentTotalActions
+        }</span>
+
+        <span class="cov0" title="0">if transactionWithProfits := decimal.NewFromInt(operation.UnitCost.IntPart()).GreaterThan(lastUnitCost); transactionWithProfits == true </span><span class="cov0" title="0">{
+                profits = decimal.NewFromInt(actionsDecreased*(operation.UnitCost.IntPart()-lastUnitCost.IntPart()) - lastDamage.IntPart())
+                loss = decimal.NewFromInt(0)
+                taxToPay = decimal.NewFromInt(profits.IntPart() * taxPercentPaid).Div(decimal.NewFromInt(100))
+        }</span> else<span class="cov0" title="0"> if decimal.NewFromInt(operation.UnitCost.IntPart()).Equals(weightedAveragePrice) </span><span class="cov0" title="0">{
+                loss = decimal.NewFromInt(0)
+                profits = decimal.NewFromInt(0)
+        }</span> else<span class="cov0" title="0"> {
+                loss = decimal.NewFromInt(actionsDecreased * operation.UnitCost.IntPart())
+                profits = decimal.NewFromInt(0)
+        }</span>
+
+        <span class="cov0" title="0">if isTaxFreeOperation := operation.Quantity * operation.UnitCost.IntPart(); isTaxFreeOperation &lt;= maximumProfitAllowed </span><span class="cov0" title="0">{
+                return loss, decimal.NewFromInt(0)
+        }</span>
+
+        <span class="cov0" title="0">return loss, taxToPay</span>
+}
+
+func calculateWeightedAverage(operation Operation, currentTotalActions int64,
+        currentWeightedAverage decimal.Decimal) decimal.Decimal <span class="cov0" title="0">{
+
+        newWeightedAverage := ((currentTotalActions * currentWeightedAverage.IntPart()) +
+                (operation.Quantity * operation.UnitCost.IntPart())) /
+                (currentTotalActions + operation.Quantity)
+
+        return decimal.NewFromInt(newWeightedAverage)
+}</span>
+</pre>
 		
 		</div>
 	</body>
