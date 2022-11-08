@@ -3,8 +3,14 @@ package financial
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"log"
 	"os"
+)
+
+const (
+	maximumProfitAllowed = 20000
+	taxOperationBuy      = 0
 )
 
 // CalculateCapitalGains - service method for calculate capital gains
@@ -41,11 +47,83 @@ func buildJsonToStruct(operationList *os.File) ([]Operation, error) {
 
 func calculateFees(operations []Operation) ([]Fee, error) {
 
+	var weightedAveragePrice, lastUnitCost, lastDamage decimal.Decimal
+	var currentTotalActions int64
 	arrFees := make([]Fee, len(operations))
 
 	for i, v := range operations {
-		arrFees[i].Tax = v.UnitCost
+		switch v.Type {
+		case OperationBuy:
+			v.TaxPaid, weightedAveragePrice = calculateBuyTax(v, currentTotalActions, weightedAveragePrice)
+			currentTotalActions += v.Quantity
+		case OperationSell:
+			v.TaxPaid, lastDamage = calculateSellTax(v, currentTotalActions, weightedAveragePrice, lastUnitCost, lastDamage)
+			currentTotalActions -= v.Quantity
+		}
+
+		lastUnitCost = v.UnitCost
+		arrFees[i].Tax = v.TaxPaid
 	}
 
 	return arrFees, nil
+}
+
+func calculateBuyTax(operation Operation, currentTotalActions int64,
+	currentWeightedAverage decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
+
+	newWeightedAverage := calculateWeightedAverage(operation, currentTotalActions, currentWeightedAverage)
+
+	return decimal.NewFromInt(taxOperationBuy), newWeightedAverage
+}
+
+func calculateSellTax(operation Operation, currentTotalActions int64,
+	weightedAveragePrice, lastUnitCost, lastDamage decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
+
+	_, _, loss, taxToPay := calculateTaxOperation(operation, currentTotalActions, weightedAveragePrice,
+		lastUnitCost, lastDamage)
+
+	return taxToPay, loss
+}
+
+func calculateTaxOperation(operation Operation, currentTotalActions int64, weightedAveragePrice,
+	lastUnitCost, lastDamage decimal.Decimal) (bool, decimal.Decimal, decimal.Decimal, decimal.Decimal) {
+
+	var profits, loss, taxToPay decimal.Decimal
+	var taxPercentPaid int64 = 20
+
+	actionsDecreased := currentTotalActions - operation.Quantity
+	if actionsDecreased == 0 {
+		actionsDecreased = currentTotalActions
+	}
+
+	fmt.Println(operation.UnitCost)
+	fmt.Println(weightedAveragePrice)
+
+	if transactionWithProfits := decimal.NewFromInt(operation.UnitCost.IntPart()).GreaterThan(lastUnitCost); transactionWithProfits == true {
+		profits = decimal.NewFromInt(actionsDecreased*(operation.UnitCost.IntPart()-lastUnitCost.IntPart()) - lastDamage.IntPart())
+		loss = decimal.NewFromInt(0)
+		taxToPay = decimal.NewFromInt(profits.IntPart() * taxPercentPaid).Div(decimal.NewFromInt(100))
+	} else if decimal.NewFromInt(operation.UnitCost.IntPart()).Equals(weightedAveragePrice) {
+		loss = decimal.NewFromInt(0)
+		profits = decimal.NewFromInt(0)
+	} else {
+		loss = decimal.NewFromInt(actionsDecreased * operation.UnitCost.IntPart())
+		profits = decimal.NewFromInt(0)
+	}
+
+	if isTaxFreeOperation := operation.Quantity * operation.UnitCost.IntPart(); isTaxFreeOperation <= maximumProfitAllowed {
+		return true, profits, loss, decimal.NewFromInt(0)
+	}
+
+	return false, profits, loss, taxToPay
+}
+
+func calculateWeightedAverage(operation Operation, currentTotalActions int64,
+	currentWeightedAverage decimal.Decimal) decimal.Decimal {
+
+	newWeightedAverage := ((currentTotalActions * currentWeightedAverage.IntPart()) +
+		(operation.Quantity * operation.UnitCost.IntPart())) /
+		(currentTotalActions + operation.Quantity)
+
+	return decimal.NewFromInt(newWeightedAverage)
 }
