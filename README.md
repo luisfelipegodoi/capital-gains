@@ -6,15 +6,6 @@ Desafio nubank sobre o tema Ganho de Capitais.
 * Extraia o projeto compactado para o seu repositório local;
 * Abra o projeto na IDE de sua escolha. Recomendo para GO estas: vs-code ou goland;
 
-### Variáveis de ambiente
-``` bash
-# sete suas envs dessa maneira:
-GOPRIVATE="github.com/PicPay"
-GOSUMDB="off"
-GONOPROXY="github.com/PicPay"
-GONOSUMDB="github.com/PicPay"
-```
-
 ### Comandos úteis
 
 #### Assumindo que você irá rodar com o GO previamente instalado na sua maquina:
