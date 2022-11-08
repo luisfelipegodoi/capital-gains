@@ -79,14 +79,14 @@ func calculateBuyTax(operation Operation, currentTotalActions int64,
 func calculateSellTax(operation Operation, currentTotalActions int64,
 	weightedAveragePrice, lastUnitCost, lastDamage decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
 
-	_, _, loss, taxToPay := calculateTaxOperation(operation, currentTotalActions, weightedAveragePrice,
+	loss, taxToPay := calculateTaxOperation(operation, currentTotalActions, weightedAveragePrice,
 		lastUnitCost, lastDamage)
 
 	return taxToPay, loss
 }
 
 func calculateTaxOperation(operation Operation, currentTotalActions int64, weightedAveragePrice,
-	lastUnitCost, lastDamage decimal.Decimal) (bool, decimal.Decimal, decimal.Decimal, decimal.Decimal) {
+	lastUnitCost, lastDamage decimal.Decimal) (decimal.Decimal, decimal.Decimal) {
 
 	var profits, loss, taxToPay decimal.Decimal
 	var taxPercentPaid int64 = 20
@@ -95,9 +95,6 @@ func calculateTaxOperation(operation Operation, currentTotalActions int64, weigh
 	if actionsDecreased == 0 {
 		actionsDecreased = currentTotalActions
 	}
-
-	fmt.Println(operation.UnitCost)
-	fmt.Println(weightedAveragePrice)
 
 	if transactionWithProfits := decimal.NewFromInt(operation.UnitCost.IntPart()).GreaterThan(lastUnitCost); transactionWithProfits == true {
 		profits = decimal.NewFromInt(actionsDecreased*(operation.UnitCost.IntPart()-lastUnitCost.IntPart()) - lastDamage.IntPart())
@@ -112,10 +109,10 @@ func calculateTaxOperation(operation Operation, currentTotalActions int64, weigh
 	}
 
 	if isTaxFreeOperation := operation.Quantity * operation.UnitCost.IntPart(); isTaxFreeOperation <= maximumProfitAllowed {
-		return true, profits, loss, decimal.NewFromInt(0)
+		return loss, decimal.NewFromInt(0)
 	}
 
-	return false, profits, loss, taxToPay
+	return loss, taxToPay
 }
 
 func calculateWeightedAverage(operation Operation, currentTotalActions int64,
