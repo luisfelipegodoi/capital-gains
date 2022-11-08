@@ -1,3 +1,4 @@
+//go:generate go run github.com/golang/mock/mockgen -source=service.go -destination=mock/service.go
 package financial
 
 import (
@@ -12,6 +13,10 @@ const (
 	maximumProfitAllowed = 20000
 	taxOperationBuy      = 0
 )
+
+type CapitalGains interface {
+	CalculateCapitalGains(operationList *os.File) ([]Fee, error)
+}
 
 // CalculateCapitalGains - service method for calculate capital gains
 func CalculateCapitalGains(operationList *os.File) ([]Fee, error) {
