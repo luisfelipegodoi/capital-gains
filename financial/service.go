@@ -52,22 +52,22 @@ func buildJsonToStruct(operationList *os.File) ([]Operation, error) {
 
 func calculateFees(operations []Operation) ([]Fee, error) {
 
-	var weightedAveragePrice, lastUnitCost, lastDamage decimal.Decimal
+	var weightedAveragePrice, lastUnitCost, lastDamage, taxPaid decimal.Decimal
 	var currentTotalActions int64
 	arrFees := make([]Fee, len(operations))
 
 	for i, v := range operations {
 		switch v.Type {
 		case OperationBuy:
-			v.TaxPaid, weightedAveragePrice = calculateBuyTax(v, currentTotalActions, weightedAveragePrice)
+			taxPaid, weightedAveragePrice = calculateBuyTax(v, currentTotalActions, weightedAveragePrice)
 			currentTotalActions += v.Quantity
 		case OperationSell:
-			v.TaxPaid, lastDamage = calculateSellTax(v, currentTotalActions, weightedAveragePrice, lastUnitCost, lastDamage)
+			taxPaid, lastDamage = calculateSellTax(v, currentTotalActions, weightedAveragePrice, lastUnitCost, lastDamage)
 			currentTotalActions -= v.Quantity
 		}
 
 		lastUnitCost = v.UnitCost
-		arrFees[i].Tax = v.TaxPaid
+		arrFees[i].Tax = taxPaid
 	}
 
 	return arrFees, nil
